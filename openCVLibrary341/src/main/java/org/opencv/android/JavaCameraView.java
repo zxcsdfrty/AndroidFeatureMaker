@@ -144,6 +144,7 @@ public class JavaCameraView extends CameraBridgeViewBase implements PreviewCallb
                 List<android.hardware.Camera.Size> sizes = params.getSupportedPreviewSizes();
                 if (sizes != null) {
                     /* Select the size that fits surface considering maximum size allowed */
+                    //調整解析度
                     Size frameSize = calculateCameraFrameSize(sizes, new JavaCameraSizeAccessor(), width/2, height/2); //720*540
                     //Size frameSize = calculateCameraFrameSize(sizes, new JavaCameraSizeAccessor(), width, height); //1440*1080
                     /* Image format NV21 causes issues in the Android emulators */
