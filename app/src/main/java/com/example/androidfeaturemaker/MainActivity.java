@@ -1,6 +1,6 @@
 package com.example.androidfeaturemaker;
-
 import android.Manifest;
+import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.content.res.Resources;
 import android.graphics.Bitmap;
@@ -15,7 +15,9 @@ import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.SurfaceView;
+import android.view.View;
 import android.view.WindowManager;
+import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.TextView;
 
@@ -67,7 +69,6 @@ import static org.opencv.core.Core.gemm;
 import static org.opencv.core.Core.log;
 import static org.opencv.features2d.DescriptorMatcher.BRUTEFORCE_HAMMING;
 import static org.opencv.features2d.Features2d.drawKeypoints;
-
 public class MainActivity extends AppCompatActivity implements CameraBridgeViewBase.CvCameraViewListener2{
 
     //解析度在JavaCameraView調
@@ -105,8 +106,6 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
 
     MatOfDouble distCoeffs=new MatOfDouble();
 
-    MatOfPoint3f makerCorner =new MatOfPoint3f();
-
     Mat Tvec=new Mat();
     Mat Rvec=new Mat();
 
@@ -140,12 +139,15 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        List<Point3> makerPoints = new ArrayList<Point3>();
-        makerPoints.add(new Point3( -100.0f,-100.0f,0));
-        makerPoints.add(new Point3( +100.0f,-100.0f,0));
-        makerPoints.add(new Point3( +100.0f,+100.0f,0));
-        makerPoints.add(new Point3( -100.0f,+100.0f,0));
-        makerCorner.fromList(makerPoints);
+        Button calibration = (Button)findViewById(R.id.Calibration);
+        calibration.setOnClickListener(new Button.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Intent intent=new Intent();
+                intent.setClass(MainActivity.this,Calibration.class);
+                startActivity(intent);
+            }
+        });
 
         //相機內部參數
         cameraMatrix.put(0,0,608.33742247);
@@ -164,6 +166,7 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
         distCoeffs.put(0,2,0.00108110572);
         distCoeffs.put(0,3,-0.000319788278);
         distCoeffs.put(0,4,-0.699416596);
+
 
         Bitmap bmp = BitmapFactory.decodeResource(getResources(), R.drawable.p1);
         Bitmap bmp32 = bmp.copy(Bitmap.Config.ARGB_8888, true);
@@ -262,6 +265,8 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
                 if (dist > max_dist) max_dist = dist;
         }
         Log.i("distance","min: "+min_dist+" max: "+max_dist);
+        if(min_dist > 70 )
+            return mRgba;
 
         LinkedList<DMatch> good_matches = new LinkedList<DMatch>();
         MatOfDMatch gm = new MatOfDMatch();
@@ -272,8 +277,7 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
             }
         }
         Log.i("goodMatcheSize"," "+good_matches.size());
-
-        if(good_matches.size()>70 ||good_matches.size() < 4 )
+        if(good_matches.size() < 4 )
             return mRgba;
 
         gm.fromList(good_matches);
@@ -318,17 +322,7 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
         Imgproc.line(mRgba, new Point(scene_corners.get(2,0)), new Point(scene_corners.get(3,0)), new Scalar(0, 255, 255),4);
         Imgproc.line(mRgba, new Point(scene_corners.get(3,0)), new Point(scene_corners.get(0,0)), new Scalar(0, 255, 255),4);
 
-
         //推出相機在世界座標系的位置
-        /*
-        List<Point> scenePoints = new ArrayList<Point>();
-        scenePoints.add(new Point(scene_corners.get(0,0)));
-        scenePoints.add(new Point(scene_corners.get(0,1)));
-        scenePoints.add(new Point(scene_corners.get(0,2)));
-        scenePoints.add(new Point(scene_corners.get(0,3)));
-        MatOfPoint2f sceneCorner=new MatOfPoint2f();
-        sceneCorner.fromList(scenePoints);*/
-
         List<Point3> makerList = new ArrayList<Point3>();
         for(int i = 0; i<good_matches.size(); i++){
             makerList.add(new Point3((keypoints_objectList.get(good_matches.get(i).queryIdx).pt.x-100),
@@ -336,14 +330,12 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
         }
         MatOfPoint3f makerPoints =new MatOfPoint3f();
         makerPoints.fromList(makerList);
-        //Calib3d.solvePnP(makerCorner,sceneCorner,cameraMatrix,distCoeffs,Rvec,Tvec,true,Calib3d.CV_P3P);p3p n=4,不須共面
+
         Calib3d.solvePnP(makerPoints,scene,cameraMatrix,distCoeffs,Rvec,Tvec,true,Calib3d.CV_EPNP);//CV_EPNP n>3
 
         Log.i("Tvec",""+Tvec.get(0,0)[0]+" "+Tvec.get(1,0)[0]+" "+Tvec.get(2,0)[0]);
-
         //Rvec有3個參數要傳給server,代表相機跟標記間的角度關西
         Log.i("Rvec",""+Rvec.get(0,0)[0]+" "+Rvec.get(1,0)[0]+" "+Rvec.get(2,0)[0]);
-
         Log.i("Angle",""+Rvec.get(0,0)[0]*180/Math.PI+" "+Rvec.get(1,0)[0]*180/Math.PI+" "+Rvec.get(2,0)[0]*180/Math.PI);
 
         //將rvec轉成矩陣
