@@ -67,6 +67,8 @@ import static org.opencv.core.Core.add;
 import static org.opencv.core.Core.eigen;
 import static org.opencv.core.Core.gemm;
 import static org.opencv.core.Core.log;
+import static org.opencv.core.Core.pow;
+import static org.opencv.core.Core.sqrt;
 import static org.opencv.features2d.DescriptorMatcher.BRUTEFORCE_HAMMING;
 import static org.opencv.features2d.Features2d.drawKeypoints;
 public class MainActivity extends AppCompatActivity implements CameraBridgeViewBase.CvCameraViewListener2{
@@ -74,38 +76,27 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
     //解析度在JavaCameraView調
     JavaCameraView javaCameraView;
     private static String Tag = "MainActivity";
-
     FeatureDetector featureDetector = FeatureDetector.create(FeatureDetector.AKAZE);//opencv不支持SIFT、SURF检测方法
     DescriptorExtractor descriptorExtractor = DescriptorExtractor.create(DescriptorExtractor.AKAZE);
-
     //match descriptor vectors
     DescriptorMatcher matcher = DescriptorMatcher.create(BRUTEFORCE_HAMMING);
     MatOfDMatch matches = new MatOfDMatch();
-
     MatOfKeyPoint keyPoint_train =new MatOfKeyPoint();
     MatOfKeyPoint keyPoint_test =new MatOfKeyPoint();
-
     Mat descriptor1 =new Mat();
     Mat descriptor2 =new Mat();
-
     Mat mRgba = new Mat();
     Mat mGray = new Mat();
-
     Size size = new Size(200, 200); //圖片size為200*200
-
     Mat oldpaste=new Mat();
     Mat paste = new Mat(size, CvType.CV_16S);
     Mat oldmaker= new Mat();
     Mat maker = new Mat(size, CvType.CV_16S);//CV_16S：16-bit signed integers ( -32768~32767 ) →大小相當於short
     Mat makerGray = new Mat();
-
     Mat obj_pixel = new Mat((int)size.height,(int)size.width,CvType.CV_32FC2);
     Mat scene_pixel = new Mat((int)size.height,(int)size.width,CvType.CV_32FC2);
-
     Mat cameraMatrix=new Mat(3,3,CvType.CV_32F);//CV_32F：32-bit ﬂoating-point numbers
-
     MatOfDouble distCoeffs=new MatOfDouble();
-
     Mat Tvec=new Mat();
     Mat Rvec=new Mat();
 
@@ -322,6 +313,15 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
         Imgproc.line(mRgba, new Point(scene_corners.get(2,0)), new Point(scene_corners.get(3,0)), new Scalar(0, 255, 255),4);
         Imgproc.line(mRgba, new Point(scene_corners.get(3,0)), new Point(scene_corners.get(0,0)), new Scalar(0, 255, 255),4);
 
+        /*
+        MatOfPoint2f scene_test = new MatOfPoint2f();
+        Core.perspectiveTransform(obj,scene_test, hg);
+        for(int i = 0; i<objList.size(); i++){
+            Point origin=new Point(scene.get(i,0));
+            Point test=new Point(scene_test.get(i,0));
+            Log.i("ransac", i + " : "+ Math.sqrt((origin.x-test.x)*(origin.x-test.x)+(origin.y-test.y)*(origin.y-test.y)));
+        }*/
+
         //推出相機在世界座標系的位置
         List<Point3> makerList = new ArrayList<Point3>();
         for(int i = 0; i<good_matches.size(); i++){
@@ -332,7 +332,6 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
         makerPoints.fromList(makerList);
 
         Calib3d.solvePnP(makerPoints,scene,cameraMatrix,distCoeffs,Rvec,Tvec,true,Calib3d.CV_EPNP);//CV_EPNP n>3
-
         Log.i("Tvec",""+Tvec.get(0,0)[0]+" "+Tvec.get(1,0)[0]+" "+Tvec.get(2,0)[0]);
         //Rvec有3個參數要傳給server,代表相機跟標記間的角度關西
         Log.i("Rvec",""+Rvec.get(0,0)[0]+" "+Rvec.get(1,0)[0]+" "+Rvec.get(2,0)[0]);
@@ -346,7 +345,6 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
                 " "+rotMat.get(2,0)[0]+" "+rotMat.get(2,1)[0]+" "+rotMat.get(2,2)[0]);
         //camera世界座標
         Mat result=new Mat();
-
         Core.gemm(rotMat.inv(),Tvec,-1,new Mat(),0,result);//result=alpha*src1*src2+beta*src3
         Log.i("world", result.get(0,0)[0]+" "+result.get(1,0)[0]+" "+result.get(2,0)[0]);
 

@@ -25,7 +25,8 @@ public class CameraCalibrator {
     private Mat mDistortionCoefficients = new Mat();
     private int mFlags;
     private double mRms;
-    private double mSquareSize = 0.0181;
+    //private double mSquareSize = 0.0181;
+    private double mSquareSize = 0.03;
     private Size mImageSize;
     public CameraCalibrator(int width, int height) {
         mImageSize = new Size(width, height);
@@ -103,7 +104,7 @@ public class CameraCalibrator {
         return Math.sqrt(totalError / totalPoints);
     }
     private void findPattern(Mat grayFrame) {
-       /*mPatternWasFound = Calib3d.findCirclesGrid(grayFrame, mPatternSize,
+        /*mPatternWasFound = Calib3d.findCirclesGrid(grayFrame, mPatternSize,
                 mCorners, Calib3d.CALIB_CB_ASYMMETRIC_GRID);*/
         mPatternWasFound = Calib3d.findChessboardCorners(grayFrame, mPatternSize,
                 mCorners);
