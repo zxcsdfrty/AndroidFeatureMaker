@@ -87,14 +87,13 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
     Mat descriptor2 =new Mat();
     Mat mRgba = new Mat();
     Mat mGray = new Mat();
-    Size size = new Size(200, 200); //圖片size為200*200
-    Mat oldpaste=new Mat();
-    Mat paste = new Mat(size, CvType.CV_16S);
+    //Mat oldpaste=new Mat();
+    //Mat paste = new Mat();
     Mat oldmaker= new Mat();
-    Mat maker = new Mat(size, CvType.CV_16S);//CV_16S：16-bit signed integers ( -32768~32767 ) →大小相當於short
+    Mat maker = new Mat();
     Mat makerGray = new Mat();
-    Mat obj_pixel = new Mat((int)size.height,(int)size.width,CvType.CV_32FC2);
-    Mat scene_pixel = new Mat((int)size.height,(int)size.width,CvType.CV_32FC2);
+    //Mat obj_pixel = new Mat((int)size.height,(int)size.width,CvType.CV_32FC2);
+    //Mat scene_pixel = new Mat((int)size.height,(int)size.width,CvType.CV_32FC2);
     Mat cameraMatrix=new Mat(3,3,CvType.CV_32F);//CV_32F：32-bit ﬂoating-point numbers
     MatOfDouble distCoeffs=new MatOfDouble();
     Mat Tvec=new Mat();
@@ -141,11 +140,13 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
         });
 
         //相機內部參數
-        cameraMatrix.put(0,0,608.33742247);
+        //cameraMatrix.put(0,0,608.33742247);
+        cameraMatrix.put(0,0,550.33742247);
         cameraMatrix.put(0,1,0);
-        cameraMatrix.put(0,2,322.62381387);
+        cameraMatrix.put(0,2,360.62381387);
         cameraMatrix.put(1,0,0);
-        cameraMatrix.put(1,1,607.41692009);
+        //cameraMatrix.put(1,1,607.41692009);
+        cameraMatrix.put(1,1,550.41692009);
         cameraMatrix.put(1,2,240.04093524);
         cameraMatrix.put(2,0,0);
         cameraMatrix.put(2,1,0);
@@ -158,17 +159,18 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
         distCoeffs.put(0,3,-0.000319788278);
         distCoeffs.put(0,4,-0.699416596);
 
-
         Bitmap bmp = BitmapFactory.decodeResource(getResources(), R.drawable.p1);
         Bitmap bmp32 = bmp.copy(Bitmap.Config.ARGB_8888, true);
         Utils.bitmapToMat(bmp32, oldmaker);
-        Log.i("oldmaker",""+oldmaker.cols()+"  "+oldmaker.rows());
-        Imgproc.resize(oldmaker, maker,size);//调用Imgproc的Resize方法，进行图片缩放
+        //Imgproc.resize(oldmaker, maker,new Size(oldmaker.cols()/4, oldmaker.rows()/4));//调用Imgproc的Resize方法，进行图片缩放
+        Imgproc.pyrDown(oldmaker, maker, new Size(oldmaker.cols()/2, oldmaker.rows()/2));
 
+        /*
         bmp = BitmapFactory.decodeResource(getResources(), R.drawable.p2);
         bmp32 = bmp.copy(Bitmap.Config.ARGB_8888, true);
         Utils.bitmapToMat(bmp32, oldpaste);
         Imgproc.resize(oldpaste, paste,size);// 將圖片大小設為跟maker一樣
+        */
 
         //將maker轉成灰階
         Imgproc.cvtColor(maker, makerGray, Imgproc.COLOR_RGB2GRAY);
@@ -180,7 +182,6 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED)
             //ask for authorisation
             ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.CAMERA}, 50);
-        //txt1 = (TextView) findViewById(R.id.txt1);
         javaCameraView = (JavaCameraView) findViewById(R.id.java_camera_view);
         javaCameraView.setVisibility(SurfaceView.VISIBLE);
         javaCameraView.setCvCameraViewListener(this);
@@ -255,18 +256,20 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
                 if (dist < min_dist) min_dist = dist;
                 if (dist > max_dist) max_dist = dist;
         }
+
         Log.i("distance","min: "+min_dist+" max: "+max_dist);
-        if(min_dist > 70 )
+        if(min_dist > 30 )
             return mRgba;
 
         LinkedList<DMatch> good_matches = new LinkedList<DMatch>();
         MatOfDMatch gm = new MatOfDMatch();
         //對匹配結果進行篩選
         for(int i = 0; i < descriptor1.rows(); i++){
-            if(matchesList.get(i).distance <= 2*min_dist){
+            if(matchesList.get(i).distance <= 3*min_dist){
                 good_matches.addLast(matchesList.get(i));
             }
         }
+
         Log.i("goodMatcheSize"," "+good_matches.size());
         if(good_matches.size() < 4 )
             return mRgba;
@@ -285,6 +288,7 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
             Log.i("point2",""+keypoints_sceneList.get(good_matches.get(i).trainIdx).pt);
             objList.addLast(keypoints_objectList.get(good_matches.get(i).queryIdx).pt);
             sceneList.addLast(keypoints_sceneList.get(good_matches.get(i).trainIdx).pt);
+            Imgproc.circle(mRgba,keypoints_sceneList.get(good_matches.get(i).trainIdx).pt,2,new Scalar(255, 0, 255), -1);
         }
 
         MatOfPoint2f obj = new MatOfPoint2f();
@@ -308,45 +312,36 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
         Core.perspectiveTransform(obj_corners,scene_corners, hg);
 
         //劃出實景中maker邊線
-        Imgproc.line(mRgba, new Point(scene_corners.get(0,0)), new Point(scene_corners.get(1,0)), new Scalar(0, 255, 255),4);
-        Imgproc.line(mRgba, new Point(scene_corners.get(1,0)), new Point(scene_corners.get(2,0)), new Scalar(0, 255, 255),4);
-        Imgproc.line(mRgba, new Point(scene_corners.get(2,0)), new Point(scene_corners.get(3,0)), new Scalar(0, 255, 255),4);
-        Imgproc.line(mRgba, new Point(scene_corners.get(3,0)), new Point(scene_corners.get(0,0)), new Scalar(0, 255, 255),4);
-
-        /*
-        MatOfPoint2f scene_test = new MatOfPoint2f();
-        Core.perspectiveTransform(obj,scene_test, hg);
-        for(int i = 0; i<objList.size(); i++){
-            Point origin=new Point(scene.get(i,0));
-            Point test=new Point(scene_test.get(i,0));
-            Log.i("ransac", i + " : "+ Math.sqrt((origin.x-test.x)*(origin.x-test.x)+(origin.y-test.y)*(origin.y-test.y)));
-        }*/
+        Imgproc.line(mRgba, new Point(scene_corners.get(0,0)), new Point(scene_corners.get(1,0)), new Scalar(0, 255, 0),4);
+        Imgproc.line(mRgba, new Point(scene_corners.get(1,0)), new Point(scene_corners.get(2,0)), new Scalar(0, 255, 0),4);
+        Imgproc.line(mRgba, new Point(scene_corners.get(2,0)), new Point(scene_corners.get(3,0)), new Scalar(0, 255, 0),4);
+        Imgproc.line(mRgba, new Point(scene_corners.get(3,0)), new Point(scene_corners.get(0,0)), new Scalar(0, 255, 0),4);
 
         //推出相機在世界座標系的位置
         List<Point3> makerList = new ArrayList<Point3>();
         for(int i = 0; i<good_matches.size(); i++){
-            makerList.add(new Point3((keypoints_objectList.get(good_matches.get(i).queryIdx).pt.x-100),
-                   -(keypoints_objectList.get(good_matches.get(i).queryIdx).pt.y-100),0));
+            Log.i("XandY"," "+keypoints_objectList.get(good_matches.get(i).queryIdx).pt.x+" "+keypoints_objectList.get(good_matches.get(i).queryIdx).pt.y);
+            makerList.add(new Point3(( keypoints_objectList.get(good_matches.get(i).queryIdx).pt.x-maker.cols()/2 )*200/maker.cols(),
+                   -(( keypoints_objectList.get(good_matches.get(i).queryIdx).pt.y-maker.rows()/2 )*200/maker.rows()),0) );
         }
         MatOfPoint3f makerPoints =new MatOfPoint3f();
         makerPoints.fromList(makerList);
-
-        Calib3d.solvePnP(makerPoints,scene,cameraMatrix,distCoeffs,Rvec,Tvec,true,Calib3d.CV_EPNP);//CV_EPNP n>3
+        Calib3d.solvePnPRansac(makerPoints,scene,cameraMatrix,distCoeffs,Rvec,Tvec);//CV_EPNP n>3
+        //Calib3d.solvePnP(makerPoints,scene,cameraMatrix,distCoeffs,Rvec,Tvec,true,Calib3d.CV_EPNP);//CV_EPNP n>3
         Log.i("Tvec",""+Tvec.get(0,0)[0]+" "+Tvec.get(1,0)[0]+" "+Tvec.get(2,0)[0]);
         //Rvec有3個參數要傳給server,代表相機跟標記間的角度關西
         Log.i("Rvec",""+Rvec.get(0,0)[0]+" "+Rvec.get(1,0)[0]+" "+Rvec.get(2,0)[0]);
         Log.i("Angle",""+Rvec.get(0,0)[0]*180/Math.PI+" "+Rvec.get(1,0)[0]*180/Math.PI+" "+Rvec.get(2,0)[0]*180/Math.PI);
-
         //將rvec轉成矩陣
         Mat rotMat=new Mat(3,3,CvType.CV_32F);
         Calib3d.Rodrigues(Rvec,rotMat);
-        Log.i("Rodrigues",""+rotMat.get(0,0)[0]+" "+rotMat.get(0,1)[0]+" "+rotMat.get(0,2)[0]+
-                " "+rotMat.get(1,0)[0]+" "+rotMat.get(1,1)[0]+" "+rotMat.get(1,2)[0]+
-                " "+rotMat.get(2,0)[0]+" "+rotMat.get(2,1)[0]+" "+rotMat.get(2,2)[0]);
         //camera世界座標
         Mat result=new Mat();
         Core.gemm(rotMat.inv(),Tvec,-1,new Mat(),0,result);//result=alpha*src1*src2+beta*src3
-        Log.i("world", result.get(0,0)[0]+" "+result.get(1,0)[0]+" "+result.get(2,0)[0]);
+        Log.i("cameraWorld", result.get(0,0)[0]+" "+result.get(1,0)[0]+" "+result.get(2,0)[0]);
+        // right-handed coordinates system (OpenCV) to left-handed one (Unity)
+        Point3 unityPosition= new Point3(-result.get(0,0)[0],result.get(1,0)[0],result.get(2,0)[0]);
+        Log.i("unityPosition", unityPosition.x+" "+unityPosition.y+" "+unityPosition.z);
 
         /*
         //將obj與實景貼合
@@ -364,6 +359,9 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
                 //將貼圖(height,width)位置的pixel的資料存下來
                 double[] data=paste.get(height,width);
                 Point point=new Point(scene_pixel.get(height,width));
+                if(point.x>mRgba.cols()||point.x<0||point.y>mRgba.rows()||point.y<0)
+                    continue;
+                Log.i("pixelPosition",""+point.x+point.y);
                 //Log.i("color","R:"+data[0]+" G:"+data[1]+" B:"+data[2]+" A:"+data[3]);
                 //point.y對應row，point.x對應col,data[0-3] RGBA
                 if(data[0]==255 && data[1]==255 && data[2]==255)//將obj白色部份去掉
