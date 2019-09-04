@@ -494,7 +494,7 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
                                 Thread.currentThread().interrupt();
                             }
 
-                            st = mRgba.cols() + " " + mRgba.rows();
+                            st = mRgba.cols()/2 + " " + mRgba.rows()/2;
                             outputStream = socket.getOutputStream();
                             outputStream.write((st).getBytes("utf-8"));
                             outputStream.flush();
@@ -545,7 +545,7 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
                                     len += dataInput.read(data[buffer], len, datasize - len);
                                 }
                                 try {
-                                    Thread.sleep(1000);
+                                    Thread.sleep(500);
                                 } catch (InterruptedException ex) {
                                     Thread.currentThread().interrupt();
                                 }
@@ -574,22 +574,22 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
             }
         });
         Mat base=new Mat();
-        Mat mask=new Mat();
+        //Mat mask=new Mat();
         if(paste.rows()!=0) {
-            Imgproc.resize(mRgba, base, new Size(mRgba.cols() / 4, mRgba.rows() / 4));
-            Imgproc.resize(paste, mask, new Size(paste.cols() / 4, paste.rows() / 4));
+            Imgproc.resize(mRgba, base, new Size(mRgba.cols() / 2, mRgba.rows() / 2));
+            //Imgproc.resize(paste, mask, new Size(paste.cols() / 4, paste.rows() / 4));
             //將obj的每一個pixel貼到實景上
             for (int height = 0; height < base.rows(); height++) {
                 for (int width = 0; width < base.cols(); width++) {
                     //將貼圖(height,width)位置的pixel的資料存下來
-                    double[] data = mask.get(height, width);
+                    double[] data = paste.get(height, width);
                     Log.i("color", "R:" + data[0] + " G:" + data[1] + " B:" + data[2] + " A:" + data[3]);
-                    if(data[0]==0 && data[1]==0 && data[2]==0)
+                    if(data[0]==0 && data[1]==0 && data[2]==0 && data[3]==0)
                         continue;
                     base.put(height, width, data[0], data[1], data[2], data[3]);
                 }
             }
-            Imgproc.resize(base, mRgba, new Size(base.cols() * 4, base.rows() * 4));
+            Imgproc.resize(base, mRgba, new Size(base.cols() * 2, base.rows() * 2));
         }
         return mRgba;
     }
