@@ -96,9 +96,7 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
     int playerList;
     //紀錄玩家資訊
     Point3 unityPosition;
-    int x = 0, y = 55, z = 0;
-    int viewX = 90, viewY = 0, viewZ = 0;
-    int moveX=0, moveY=0;
+    int move = -1;
     String st;
     //test
     private Button btnSend;
@@ -239,28 +237,28 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
             public boolean onFling(MotionEvent e1, MotionEvent e2, float velocityX, float velocityY) {
                 if (e1.getX() - e2.getX() > FLIP_DISTANCE) {
                     Log.i(Tag, "向左滑...");
-                    moveX = -1;
+                    move = 3;
                     Log.i(Tag, e1.getX() + " " + e1.getY());
                     Log.i(Tag, e2.getX() + " " + e2.getY());
                     return true;
                 }
                 if (e2.getX() - e1.getX() > FLIP_DISTANCE) {
                     Log.i(Tag, "向右滑...");
-                    moveX = 1;
+                    move = 2;
                     Log.i(Tag, e1.getX() + " " + e1.getY());
                     Log.i(Tag, e2.getX() + " " + e2.getY());
                     return true;
                 }
                 if (e1.getY() - e2.getY() > FLIP_DISTANCE) {
                     Log.i(Tag, "向上滑...");
-                    moveY = 1;
+                    move = 0;
                     Log.i(Tag, e1.getX() + " " + e1.getY());
                     Log.i(Tag, e2.getX() + " " + e2.getY());
                     return true;
                 }
                 if (e2.getY() - e1.getY() > FLIP_DISTANCE) {
                     Log.i(Tag, "向下滑...");
-                    moveY = -1;
+                    move = 1;
                     Log.i(Tag, e1.getX() + " " + e1.getY());
                     Log.i(Tag, e2.getX() + " " + e2.getY());
                     return true;
@@ -288,30 +286,7 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
                         break;
                 }
             }
-
         };*/
-        mThreadPool.execute(new Runnable() {
-            @Override
-            public void run() {
-                try {
-                    // 創建socket IP port
-                    socket = new Socket("140.121.197.164", 80);
-                    // 判斷是否連接成功
-                    //System.out.println(socket.isConnected());
-                    try {
-                        Thread.sleep(50);
-                    } catch (InterruptedException ex) {
-                        Thread.currentThread().interrupt();
-                    }
-                    // record player's list
-                    InputStream in = socket.getInputStream();
-                    playerList = in.read();
-                    Log.i("playerlist", "playerlist : "+playerList);
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-            }
-        });
     }
 
     @Override
@@ -411,7 +386,7 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
         }
 
         Log.i("distance","min: "+min_dist+" max: "+max_dist);
-        if(min_dist > 30 )
+        if(min_dist > 70 )
             return mRgba;
 
         LinkedList<DMatch> good_matches = new LinkedList<DMatch>();
@@ -441,7 +416,7 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
             Log.i("point2",""+keypoints_sceneList.get(good_matches.get(i).trainIdx).pt);
             objList.addLast(keypoints_objectList.get(good_matches.get(i).queryIdx).pt);
             sceneList.addLast(keypoints_sceneList.get(good_matches.get(i).trainIdx).pt);
-            Imgproc.circle(mRgba,keypoints_sceneList.get(good_matches.get(i).trainIdx).pt,2,new Scalar(255, 0, 255), -1);
+            //Imgproc.circle(mRgba,keypoints_sceneList.get(good_matches.get(i).trainIdx).pt,2,new Scalar(255, 0, 255), -1);
         }
 
         MatOfPoint2f obj = new MatOfPoint2f();
@@ -450,6 +425,7 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
         MatOfPoint2f scene = new MatOfPoint2f();
         scene.fromList(sceneList);
 
+        /*
         //找出實景跟maker間的homography
         Mat hg = Calib3d.findHomography(obj, scene,0,Calib3d.RANSAC);
 
@@ -469,6 +445,7 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
         Imgproc.line(mRgba, new Point(scene_corners.get(1,0)), new Point(scene_corners.get(2,0)), new Scalar(0, 255, 0),4);
         Imgproc.line(mRgba, new Point(scene_corners.get(2,0)), new Point(scene_corners.get(3,0)), new Scalar(0, 255, 0),4);
         Imgproc.line(mRgba, new Point(scene_corners.get(3,0)), new Point(scene_corners.get(0,0)), new Scalar(0, 255, 0),4);
+        */
 
         //推出相機在世界座標系的位置
         List<Point3> makerList = new ArrayList<Point3>();
@@ -502,13 +479,46 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
         btnSend.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                // 利用线程池直接开启一个线程 & 执行该线程
+
+                mThreadPool.execute(new Runnable() {
+                    @Override
+                    public void run() {
+                        try {
+                            // 創建socket IP port
+                            socket = new Socket("140.121.197.164", 80);
+                            // 判斷是否連接成功
+                            //System.out.println(socket.isConnected());
+                            try {
+                                Thread.sleep(50);
+                            } catch (InterruptedException ex) {
+                                Thread.currentThread().interrupt();
+                            }
+
+                            st = mRgba.cols() + " " + mRgba.rows();
+                            outputStream = socket.getOutputStream();
+                            outputStream.write((st).getBytes("utf-8"));
+                            outputStream.flush();
+
+                            // record player's list
+                            InputStream in = socket.getInputStream();
+                            playerList = in.read();
+                            Log.i("playerlist", "playerlist : "+playerList);
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                        }
+                    }
+                });
+                try {
+                    Thread.sleep(500);
+                } catch (InterruptedException ex) {
+                    Thread.currentThread().interrupt();
+                }
                 mThreadPool.execute(new Runnable() {
                     @Override
                     public void run() {
                         while(true) {
                             //st = x + " " + y + " " + z + " " + viewX + " " + viewY + " " + viewZ + " " + playerList + " " + moveX + " " + moveY + " ";
-                            st = unityPosition.x/10 + " " + unityPosition.y/10 + " " + unityPosition.z/10 + " " + decimalFormat.format(Rvec.get(0,0)[0]) + " " + decimalFormat.format(Rvec.get(1,0)[0]) + " " + decimalFormat.format(Rvec.get(2,0)[0]) + " " + playerList + " " + moveX + " " + moveY + " ";
+                            st = decimalFormat.format(unityPosition.x/4) + " " + decimalFormat.format(unityPosition.y/4) + " " + decimalFormat.format(unityPosition.z/4) + " " + decimalFormat.format(Rvec.get(0,0)[0]) + " " + decimalFormat.format(Rvec.get(1,0)[0]) + " " + decimalFormat.format(Rvec.get(2,0)[0]) + " " + playerList + " " + move + " ";
                             try {
                                 //從socket獲得輸出流outputStream
                                 outputStream = socket.getOutputStream();
@@ -518,8 +528,7 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
                                 //發送
                                 outputStream.flush();
                                 //重置move
-                                moveX = 0;
-                                moveY = 0;
+                                move = -1;
 
                                 System.out.println("開始接收檔案");
                                 DataInputStream dataInput = new DataInputStream(socket.getInputStream());
@@ -536,7 +545,7 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
                                     len += dataInput.read(data[buffer], len, datasize - len);
                                 }
                                 try {
-                                    Thread.sleep(160);
+                                    Thread.sleep(1000);
                                 } catch (InterruptedException ex) {
                                     Thread.currentThread().interrupt();
                                 }
@@ -547,7 +556,7 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
                                 /*bmp32 = bmp.copy(bmp.getConfig(), true);
                                 Utils.bitmapToMat(bmp32, oldpaste);*/
                                 paste = Imgcodecs.imdecode(new MatOfByte(data[buffer]), Imgcodecs.CV_LOAD_IMAGE_UNCHANGED);
-
+                                Log.i("resolution",paste.rows()+" "+paste.cols());
                                 //paste.put(0,0, data[buffer]);
                                 //Imgproc.resize(mat, paste,size);//將圖片大小設為跟maker一樣*/
                                 /*Message msg = Message.obtain();
@@ -564,32 +573,24 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
 
             }
         });
-/*
-        //將obj與實景貼合
-        for(int height=0;height<paste.rows();height++){
-            for(int width=0;width<paste.cols();width++){
-                //將貼圖(height,width)位置存下來
-                obj_pixel.put(height, width, new double[] {height,width});
+        Mat base=new Mat();
+        Mat mask=new Mat();
+        if(paste.rows()!=0) {
+            Imgproc.resize(mRgba, base, new Size(mRgba.cols() / 4, mRgba.rows() / 4));
+            Imgproc.resize(paste, mask, new Size(paste.cols() / 4, paste.rows() / 4));
+            //將obj的每一個pixel貼到實景上
+            for (int height = 0; height < base.rows(); height++) {
+                for (int width = 0; width < base.cols(); width++) {
+                    //將貼圖(height,width)位置的pixel的資料存下來
+                    double[] data = mask.get(height, width);
+                    Log.i("color", "R:" + data[0] + " G:" + data[1] + " B:" + data[2] + " A:" + data[3]);
+                    if(data[0]==0 && data[1]==0 && data[2]==0)
+                        continue;
+                    base.put(height, width, data[0], data[1], data[2], data[3]);
+                }
             }
+            Imgproc.resize(base, mRgba, new Size(base.cols() * 4, base.rows() * 4));
         }
-        //將貼圖(height,width)位置轉換成在實景的位置,存在scene_pixel中
-        Core.perspectiveTransform(obj_pixel,scene_pixel, hg);
-        //將obj的每一個pixel貼到實景上
-        for(int height=0;height<paste.rows();height++){
-            for(int width=0;width<paste.cols();width++){
-                //將貼圖(height,width)位置的pixel的資料存下來
-                double[] data=paste.get(height,width);
-                Point point=new Point(scene_pixel.get(height,width));
-                if(point.x>mRgba.cols()||point.x<0||point.y>mRgba.rows()||point.y<0)
-                    continue;
-                Log.i("pixelPosition",""+point.x+point.y);
-                //Log.i("color","R:"+data[0]+" G:"+data[1]+" B:"+data[2]+" A:"+data[3]);
-                //point.y對應row，point.x對應col,data[0-3] RGBA
-                if(data[0]==255 && data[1]==255 && data[2]==255)//將obj白色部份去掉
-                    continue;
-                mRgba.put((int)point.y,(int)point.x,data[0],data[1],data[2],data[3]);
-            }
-        }*/
         return mRgba;
     }
 }
