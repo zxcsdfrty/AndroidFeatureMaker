@@ -315,7 +315,7 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
                     }
 
                     Log.i("distance","min: "+min_dist+" max: "+max_dist);
-                    if(min_dist > 60 ) {
+                    if(min_dist > 70 ) {
                         DETECTTOMAKER = FALSE;
                         continue;
                     }
@@ -479,6 +479,7 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
 
                             //傳送圖片解析度
                             st = mRgba.cols() + " " + mRgba.rows();
+                            Log.i("sendResolution",mRgba.cols() + " " + mRgba.rows());
                             outputStream = socket.getOutputStream();
                             outputStream.write((st).getBytes("utf-8"));
                             outputStream.flush();
@@ -500,7 +501,7 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
                     @Override
                     public void run() {
                         while(true) {
-                            st = decimalFormat.format(Position.x/10*2) + " " + decimalFormat.format(Position.y/10*2) + " " + decimalFormat.format(Position.z/10*2) + " " + decimalFormat.format(Rvec.get(0,0)[0]) + " " + decimalFormat.format(Rvec.get(1,0)[0]) + " " + decimalFormat.format(Rvec.get(2,0)[0]) + " " + playerList + " " + move + " ";
+                            st = decimalFormat.format(Position.x/10*3) + " " + decimalFormat.format(Position.y/10*3) + " " + decimalFormat.format(Position.z/10*3) + " " + decimalFormat.format(Rvec.get(0,0)[0]) + " " + decimalFormat.format(Rvec.get(1,0)[0]) + " " + decimalFormat.format(Rvec.get(2,0)[0]) + " " + playerList + " " + move + " ";
                             try {
                                 //從socket獲得輸出流outputStream
                                 outputStream = socket.getOutputStream();
@@ -542,7 +543,7 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
 
                                 System.out.println("放置圖片完成");
                                 try {
-                                    Thread.sleep(500);
+                                    Thread.sleep(1500);
                                 } catch (InterruptedException ex) {
                                     Thread.currentThread().interrupt();
                                 }
