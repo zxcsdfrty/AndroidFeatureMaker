@@ -310,7 +310,6 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
                     makerPoints.fromList(makerList);
                     makerPoints.copyTo(estimateMakerPoints);
 
-                    /*
                     Mat tempRvec=new Mat();
                     Rvec.copyTo(tempRvec);
                     Calib3d.solvePnPRansac(makerPoints,scene,cameraMatrix,distCoeffs,Rvec,Tvec);//CV_EPNP n>3
@@ -324,18 +323,16 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
                     //camera世界座標
                     Mat result=new Mat();
                     Core.gemm(rotMat.inv(),Tvec,-1,new Mat(),0,result);//result=alpha*src1*src2+beta*src3
-                    Log.i("cameraWorld", result.get(0,0)[0]+" "+result.get(1,0)[0]+" "+result.get(2,0)[0]);
+                    //Log.i("cameraWorld", result.get(0,0)[0]+" "+result.get(1,0)[0]+" "+result.get(2,0)[0]);
                     // right-handed coordinates system (OpenCV) to left-handed one (Unity)
-                    //前1禎與當前禎相機位置距離差距
-                    double distance = Math.sqrt(Math.pow(Position.x-result.get(0, 0)[0],2)+Math.pow(Position.y-result.get(1, 0)[0],2)+
-                                        Math.pow(Position.z-result.get(2, 0)[0],2))/10;
-                    Log.i("twoframedistance", ""+ distance);
-                    //若前後兩畫面數值差距過大則用錢一針的相機位置
-                    if(distance>50) {
+                    if(result.get(0, 0)[0] < 1000 && result.get(0, 0)[0]> -1000 &&
+                            result.get(1, 0)[0] < 0 && result.get(1, 0)[0] > -1000 &&
+                            result.get(2, 0)[0] < 1000 && result.get(2, 0)[0] > -1000) {
+                        Position = new Point3(result.get(0, 0)[0], result.get(1, 0)[0], result.get(2, 0)[0]);
+                        UnityPosition = new Point3(Position.x, -Position.y, Position.z);
+                    }else{
                         tempRvec.copyTo(Rvec);
-                        DETECTTOMAKER = TRUE;
-                        continue;
-                    }*/
+                    }
                     estimateFrame.copyTo(lightFrame);
                     DETECTTOMAKER = TRUE;
                 }
@@ -558,7 +555,7 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
 
                                 System.out.println("放置圖片完成");
                                 try {
-                                    Thread.sleep(1000);
+                                    Thread.sleep(500);
                                 } catch (InterruptedException ex) {
                                     Thread.currentThread().interrupt();
                                 }
@@ -580,7 +577,7 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
         });
 
         if(DETECTTOMAKER) {
-            Video.calcOpticalFlowPyrLK(lightFrame, mGray, estimateScenePoint, nextPtr, statusMat, errSimilarityMat);
+            /*Video.calcOpticalFlowPyrLK(lightFrame, mGray, estimateScenePoint, nextPtr, statusMat, errSimilarityMat);
             Log.i("featureSize"," "+estimateMakerPoints.rows()+" "+nextPtr.rows());
             if(estimateMakerPoints.rows()!=nextPtr.rows())
                 return mRgba;
@@ -600,7 +597,7 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
                 UnityPosition = new Point3(Position.x, -Position.y, Position.z);
             }else{
                 tempRvec.copyTo(Rvec);
-            }
+            }*/
             Log.i("lightflowTracking", decimalFormat.format(Position.x) + " " + decimalFormat.format(Position.y) + " "
                                                 + decimalFormat.format(Position.z));
             Mat frame = new Mat();
@@ -621,15 +618,15 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
                     //大于阈值部分被置为0，小于部分被置为255 取得mask
                     Imgproc.threshold(pasteGray, pasteGray, 0, 255, Imgproc.THRESH_BINARY_INV);
                     Core.bitwise_and(mRgba, mRgba, frame, pasteGray);
-                    Core.add(frame, paste, frame);
+                    Core.add(frame, pasteBuffer, frame);
                     return frame;
                 } catch (IllegalArgumentException e) {
                     Log.i("BitmapE", "" + e);
                 }
             }
         }
-        nextPtr.copyTo(estimateScenePoint);
-        mGray.copyTo(lightFrame);
+        /*nextPtr.copyTo(estimateScenePoint);
+        mGray.copyTo(lightFrame);*/
         mGray.copyTo(frameBuffer);
         return mRgba;
     }
