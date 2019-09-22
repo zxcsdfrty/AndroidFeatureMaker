@@ -213,12 +213,6 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
         javaCameraView.setVisibility(SurfaceView.VISIBLE);
         javaCameraView.setCvCameraViewListener(this);
 
-        /*btnSend.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                beginG = true;
-            }
-        });*/
         Thread positionEstimate = new Thread(new Runnable() {
             @Override
             public void run() {
@@ -257,7 +251,6 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
                         DETECTTOMAKER = FALSE;
                         continue;
                     }
-
                     Double max_dist = 0.0;
                     Double min_dist = 100.0;
                     Log.i("descriptor"," row: "+descriptor1.rows()+" col: "+descriptor1.cols());
@@ -287,15 +280,11 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
                         DETECTTOMAKER = FALSE;
                         continue;
                     }
-
                     gm.fromList(good_matches);
-
                     List<KeyPoint> keypoints_objectList = keyPoint_train.toList();
                     List<KeyPoint> keypoints_sceneList = keyPoint_test.toList();
-
                     LinkedList<Point> objList = new LinkedList<Point>();
                     LinkedList<Point> sceneList = new LinkedList<Point>();
-
                     //將匹配到的特徵點取出
                     for(int i = 0; i<good_matches.size(); i++){
                         //Log.i("point1",""+keypoints_objectList.get(good_matches.get(i).queryIdx).pt);
@@ -320,6 +309,7 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
                     MatOfPoint3f makerPoints =new MatOfPoint3f();
                     makerPoints.fromList(makerList);
                     makerPoints.copyTo(estimateMakerPoints);
+
                     /*
                     Mat tempRvec=new Mat();
                     Rvec.copyTo(tempRvec);
@@ -336,8 +326,8 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
                     Core.gemm(rotMat.inv(),Tvec,-1,new Mat(),0,result);//result=alpha*src1*src2+beta*src3
                     Log.i("cameraWorld", result.get(0,0)[0]+" "+result.get(1,0)[0]+" "+result.get(2,0)[0]);
                     // right-handed coordinates system (OpenCV) to left-handed one (Unity)
-                     //前1禎與當前禎相機位置距離差距
-                    /*double distance = Math.sqrt(Math.pow(Position.x-result.get(0, 0)[0],2)+Math.pow(Position.y-result.get(1, 0)[0],2)+
+                    //前1禎與當前禎相機位置距離差距
+                    double distance = Math.sqrt(Math.pow(Position.x-result.get(0, 0)[0],2)+Math.pow(Position.y-result.get(1, 0)[0],2)+
                                         Math.pow(Position.z-result.get(2, 0)[0],2))/10;
                     Log.i("twoframedistance", ""+ distance);
                     //若前後兩畫面數值差距過大則用錢一針的相機位置
@@ -345,12 +335,9 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
                         tempRvec.copyTo(Rvec);
                         DETECTTOMAKER = TRUE;
                         continue;
-                    }
-                    Position = new Point3(result.get(0, 0)[0], -result.get(1, 0)[0], result.get(2, 0)[0]);
-                    */
+                    }*/
                     estimateFrame.copyTo(lightFrame);
                     DETECTTOMAKER = TRUE;
-                    //Log.i("unityPosition", Position.x+" "+Position.y+" "+Position.z);
                 }
             }
         });
@@ -568,14 +555,10 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
                                     paste = Imgcodecs.imdecode(new MatOfByte(data[buffer]), Imgcodecs.CV_LOAD_IMAGE_UNCHANGED);
                                     Log.i("resolution",paste.rows()+" "+paste.cols());
                                 }
-                                //paste.put(0,0, data[buffer]);
-                                //Imgproc.resize(mat, paste,size);//將圖片大小設為跟maker一樣*/
-                                /*Message msg = Message.obtain();
-                                mMainHandler.sendMessage(msg);*/
 
                                 System.out.println("放置圖片完成");
                                 try {
-                                    Thread.sleep(500);
+                                    Thread.sleep(1000);
                                 } catch (InterruptedException ex) {
                                     Thread.currentThread().interrupt();
                                 }
@@ -585,7 +568,6 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
                         }
                     }
                 });
-
                 //start thread
                 connectServer.start();
                 try{
@@ -596,117 +578,34 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
                 }
             }
         });
+
         if(DETECTTOMAKER) {
-            /*Video.calcOpticalFlowPyrLK(lightFrame, mGray, estimateScenePoint, nextPtr, statusMat, errSimilarityMat);
-            Log.i("featureSize"," "+estimateScenePoint.rows()+" "+nextPtr.rows());
+            Video.calcOpticalFlowPyrLK(lightFrame, mGray, estimateScenePoint, nextPtr, statusMat, errSimilarityMat);
+            Log.i("featureSize"," "+estimateMakerPoints.rows()+" "+nextPtr.rows());
             if(estimateMakerPoints.rows()!=nextPtr.rows())
                 return mRgba;
-            Calib3d.solvePnPRansac(estimateMakerPoints, nextPtr, cameraMatrix, distCoeffs, Rvec, Tvec);//CV_EPNP n>3*/
-            Calib3d.solvePnPRansac(estimateMakerPoints, estimateScenePoint, cameraMatrix, distCoeffs, Rvec, Tvec);
+            Mat tempRvec=new Mat();
+            Rvec.copyTo(tempRvec);
+            Calib3d.solvePnPRansac(estimateMakerPoints, nextPtr, cameraMatrix, distCoeffs, Rvec, Tvec);//CV_EPNP n>3
             //將rvec轉成矩陣
             Mat rotMat=new Mat(3,3,CvType.CV_32F);
             Calib3d.Rodrigues(Rvec,rotMat);
             Mat result=new Mat();
             Core.gemm(rotMat.inv(),Tvec,-1,new Mat(),0,result);//result=alpha*src1*src2+beta*src3
             // right-handed coordinates system (OpenCV) to left-handed one (Unity)
-            if(result.get(0, 0)[0]<1000&&result.get(1, 0)[0]<1000&&result.get(2, 0)[0]<1000) {
+            if(result.get(0, 0)[0] < 1000 && result.get(0, 0)[0]> -1000 &&
+                    result.get(1, 0)[0] < 0 && result.get(1, 0)[0] > -1000 &&
+                    result.get(2, 0)[0] < 1000 && result.get(2, 0)[0] > -1000) {
                 Position = new Point3(result.get(0, 0)[0], result.get(1, 0)[0], result.get(2, 0)[0]);
                 UnityPosition = new Point3(Position.x, -Position.y, Position.z);
+            }else{
+                tempRvec.copyTo(Rvec);
             }
             Log.i("lightflowTracking", decimalFormat.format(Position.x) + " " + decimalFormat.format(Position.y) + " "
                                                 + decimalFormat.format(Position.z));
-            //nextPtr.copyTo(estimateScenePoint);
-
-            /*
-            btnSend.setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View v) {
-                    Thread connectThread = new Thread(new Runnable() {
-                        @Override
-                        public void run() {
-                            try {
-                                // 創建socket IP port
-                                socket = new Socket("140.121.197.164", 80);
-                                // 判斷是否連接成功
-                                //System.out.println(socket.isConnected());
-
-                                try {
-                                    Thread.sleep(50);
-                                } catch (InterruptedException ex) {
-                                    Thread.currentThread().interrupt();
-                                }
-
-                                //傳送圖片解析度
-                                st = mRgba.cols()/2 + " " + mRgba.rows()/2;
-                                outputStream = socket.getOutputStream();
-                                outputStream.write((st).getBytes("utf-8"));
-                                outputStream.flush();
-
-                                // record player's list
-                                InputStream in = socket.getInputStream();
-                                int len = 0;
-                                byte[]tmp = new byte[4];
-                                //datasize = in.available();
-                                //in.read(tmp, len, datasize - len);
-                                playerList = in.read();
-                                //Log.i("playerlist", "playerlist : "+playerList + "大小" + datasize);
-                                checkConnect = true;
-                            } catch (IOException e) {
-                                e.printStackTrace();
-                            }
-                        }
-                    });
-                    connectThread.start();
-                }
-            });
-
-            if(checkConnect){
-                st = decimalFormat.format(UnityPosition.x/10*6) + " " + decimalFormat.format(UnityPosition.y/10*6) + " " + decimalFormat.format(UnityPosition.z/10*6) + " " + decimalFormat.format(Rvec.get(0,0)[0]) + " " + decimalFormat.format(Rvec.get(1,0)[0]) + " " + decimalFormat.format(Rvec.get(2,0)[0]) + " " + playerList + " " + move + " ";
-                try {
-                    //從socket獲得輸出流outputStream
-                    outputStream = socket.getOutputStream();
-                    //寫入數據到輸出流
-                    outputStream.write((st).getBytes("utf-8"));
-                    //發送
-                    outputStream.flush();
-                    //重置move
-                    move = -1;
-
-                    System.out.println("開始接收檔案");
-                    //DataInputStream dataInput = new DataInputStream(socket.getInputStream());
-                    InputStream inputStream = socket.getInputStream();
-                    datasize = 0;
-                    while(datasize == 0) {datasize = inputStream.available();}
-                    //int datasize = dataInput.available();
-                    System.out.println("大小: " + datasize);
-                    //互換buffer----------------------------------------------------
-                    if(datasize > 0) { buffer = java.lang.Math.abs(buffer-1); }
-                    byte[][] data = new byte[2][];
-                    data[buffer] = new byte[datasize];
-                    System.out.println("buffer = " + buffer);
-                    //--------------------------------------------------------------
-                    int len = 0;
-                    inputStream.read(data[buffer], len, datasize - len);
-                    System.out.println("接收檔案完成");
-                    if(datasize > 100){
-                        paste = Imgcodecs.imdecode(new MatOfByte(data[buffer]), Imgcodecs.CV_LOAD_IMAGE_UNCHANGED);
-                        Log.i("resolution",paste.rows()+" "+paste.cols());
-                    }
-
-                    System.out.println("放置圖片完成");
-                    try {
-                        Thread.sleep(2000);
-                    } catch (InterruptedException ex) {
-                        Thread.currentThread().interrupt();
-                    }
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-            }*/
-
             Mat frame = new Mat();
             if (paste.rows()*2 == mRgba.rows() && paste.cols()*2 == mRgba.cols()) {
-                Imgproc.resize(paste,paste,new Size(paste.rows()*2,paste.cols()*2));
+                Imgproc.resize(paste,paste,new Size(paste.cols()*2,paste.rows()*2));
                 paste.copyTo(pasteBuffer);
                 //轉灰階
                 Imgproc.cvtColor(paste, pasteGray, COLOR_RGB2GRAY);
@@ -729,6 +628,8 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
                 }
             }
         }
+        nextPtr.copyTo(estimateScenePoint);
+        mGray.copyTo(lightFrame);
         mGray.copyTo(frameBuffer);
         return mRgba;
     }
