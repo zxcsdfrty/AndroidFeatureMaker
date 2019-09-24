@@ -5,6 +5,7 @@ import android.content.pm.PackageManager;
 import android.content.res.Resources;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.graphics.ColorSpace;
 import android.graphics.Matrix;
 import android.graphics.drawable.BitmapDrawable;
 import android.icu.util.TimeZone;
@@ -41,6 +42,7 @@ import org.opencv.core.MatOfByte;
 import org.opencv.core.MatOfDMatch;
 import org.opencv.core.MatOfDouble;
 import org.opencv.core.MatOfFloat;
+import org.opencv.core.MatOfInt;
 import org.opencv.core.MatOfKeyPoint;
 import org.opencv.core.MatOfPoint;
 import org.opencv.core.MatOfPoint2f;
@@ -87,9 +89,20 @@ import static org.opencv.core.Core.gemm;
 import static org.opencv.core.Core.log;
 import static org.opencv.core.Core.pow;
 import static org.opencv.core.Core.sqrt;
+import static org.opencv.core.CvType.CV_16SC3;
+import static org.opencv.core.CvType.CV_16UC3;
+import static org.opencv.core.CvType.CV_8UC3;
+import static org.opencv.core.CvType.CV_8UC4;
 import static org.opencv.features2d.DescriptorMatcher.BRUTEFORCE_HAMMING;
 import static org.opencv.features2d.Features2d.drawKeypoints;
+import static org.opencv.imgproc.Imgproc.COLOR_RGB2BGR;
+import static org.opencv.imgproc.Imgproc.COLOR_RGB2BGRA;
 import static org.opencv.imgproc.Imgproc.COLOR_RGB2GRAY;
+import static org.opencv.imgproc.Imgproc.COLOR_RGB2RGBA;
+import static org.opencv.imgproc.Imgproc.COLOR_RGBA2BGR;
+import static org.opencv.imgproc.Imgproc.COLOR_RGBA2BGRA;
+import static org.opencv.imgproc.Imgproc.COLOR_RGBA2RGB;
+import static org.opencv.imgproc.Imgproc.CV_RGBA2mRGBA;
 
 public class MainActivity extends AppCompatActivity implements CameraBridgeViewBase.CvCameraViewListener2{
 
@@ -154,6 +167,7 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
     Mat pasteBuffer=new Mat();
     //是否偵測到maker
     Boolean DETECTTOMAKER=FALSE;
+
 
     BaseLoaderCallback baseLoaderCallback = new BaseLoaderCallback(this) {
         @Override
@@ -459,7 +473,7 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
 
     @Override
     public void onCameraViewStarted(int width, int height) {
-        mRgba = new Mat(height, width, CvType.CV_8UC4);//CV_(位元數)+(資料型態)+(Channel數)
+        mRgba = new Mat(height, width, CV_8UC4);//CV_(位元數)+(資料型態)+(Channel數)
         mGray = new Mat(height, width, CvType.CV_8UC1);
     }
 
@@ -495,7 +509,7 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
                             }
 
                             //傳送圖片解析度
-                            st = mRgba.cols()/2 + " " + mRgba.rows()/2;
+                            st = mRgba.cols() + " " + mRgba.rows();
                             outputStream = socket.getOutputStream();
                             outputStream.write((st).getBytes("utf-8"));
                             outputStream.flush();
@@ -545,12 +559,12 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
                                 inputStream.read(data[buffer], len, datasize - len);
                                 //System.out.println("接收大小 : " + len);
                                 System.out.println("接收檔案完成");
-                                //bmp = BitmapFactory.decodeByteArray(data[buffer], 0, data[buffer].length); //need thread to complete this step
-                                /*bmp32 = bmp.copy(bmp.getConfig(), true);
-                                Utils.bitmapToMat(bmp32, oldpaste);*/
+
                                 if(datasize > 100){
                                     paste = Imgcodecs.imdecode(new MatOfByte(data[buffer]), Imgcodecs.CV_LOAD_IMAGE_UNCHANGED);
-                                    Log.i("resolution",paste.rows()+" "+paste.cols());
+                                    Imgproc.cvtColor(paste, paste, COLOR_RGB2BGRA);
+                                    Log.i("resolution",paste.toString());
+
                                 }
 
                                 System.out.println("放置圖片完成");
@@ -601,8 +615,8 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
             Log.i("lightflowTracking", decimalFormat.format(Position.x) + " " + decimalFormat.format(Position.y) + " "
                                                 + decimalFormat.format(Position.z));
             Mat frame = new Mat();
-            if (paste.rows()*2 == mRgba.rows() && paste.cols()*2 == mRgba.cols()) {
-                Imgproc.resize(paste,paste,new Size(paste.cols()*2,paste.rows()*2));
+            if (paste.rows() == mRgba.rows() && paste.cols() == mRgba.cols()) {
+                //Imgproc.resize(paste,paste,new Size(paste.cols()*2,paste.rows()*2));
                 paste.copyTo(pasteBuffer);
                 //轉灰階
                 Imgproc.cvtColor(paste, pasteGray, COLOR_RGB2GRAY);
