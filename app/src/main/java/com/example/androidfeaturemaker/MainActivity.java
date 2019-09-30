@@ -128,6 +128,7 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
     //速度優化
     int buffer = 0;
     DecimalFormat decimalFormat = new DecimalFormat("##.000");
+    Lock lock = new ReentrantLock();
 
     //解析度在JavaCameraView調
     JavaCameraView javaCameraView;
@@ -559,14 +560,13 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
                                 System.out.println("接收檔案完成");
 
                                 if(datasize > 100){
-                                    synchronized(paste) {
-                                        paste = Imgcodecs.imdecode(new MatOfByte(data[buffer]), Imgcodecs.CV_LOAD_IMAGE_UNCHANGED);
-                                        Log.i("resolution",paste.toString());
-                                        if(paste.rows()!=0 && paste.cols()!=0) {
-                                            Imgproc.cvtColor(paste, paste, COLOR_RGB2BGRA);
-                                            Log.i("resolution2",paste.toString());
-                                        }
+                                    lock.lock();
+                                    paste = Imgcodecs.imdecode(new MatOfByte(data[buffer]), Imgcodecs.CV_LOAD_IMAGE_UNCHANGED);
+                                    Log.i("resolution",paste.toString());
+                                    if(paste.empty()!=true) {
+                                        Imgproc.cvtColor(paste, paste, COLOR_RGB2BGRA);
                                     }
+                                    lock.unlock();
                                 }
 
                                 System.out.println("放置圖片完成");
@@ -618,17 +618,17 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
                                                 + decimalFormat.format(Position.z));
             Mat frame = new Mat();
             if (paste.rows() == mRgba.rows() && paste.cols() == mRgba.cols()) {
-                    synchronized(paste) {
-                        //Imgproc.resize(paste,paste,new Size(paste.cols()*2,paste.rows()*2));
-                        paste.copyTo(pasteBuffer);
-                        //轉灰階
-                        Imgproc.cvtColor(paste, pasteGray, COLOR_RGB2GRAY);
-                        //大于阈值部分被置为0，小于部分被置为255 取得mask
-                        Imgproc.threshold(pasteGray, pasteGray, 0, 255, Imgproc.THRESH_BINARY_INV);
-                        Core.bitwise_and(mRgba, mRgba, frame, pasteGray);
-                        Log.i("paste",paste.toString());
-                        Core.add(frame, paste, frame);
-                    }
+                    lock.lock();
+                    //Imgproc.resize(paste,paste,new Size(paste.cols()*2,paste.rows()*2));
+                    paste.copyTo(pasteBuffer);
+                    Log.i("paste",paste.toString());
+                    //轉灰階
+                    Imgproc.cvtColor(paste, pasteGray, COLOR_RGB2GRAY);
+                    //大于阈值部分被置为0，小于部分被置为255 取得mask
+                    Imgproc.threshold(pasteGray, pasteGray, 0, 255, Imgproc.THRESH_BINARY_INV);
+                    Core.bitwise_and(mRgba, mRgba, frame, pasteGray);
+                    Core.add(frame, paste, frame);
+                    lock.unlock();
                     return frame;
                 }
             else if (pasteBuffer.empty() != true) {
