@@ -273,13 +273,11 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
                         if (dist < min_dist) min_dist = dist;
                         if (dist > max_dist) max_dist = dist;
                     }
-
                     Log.i("distance","min: "+min_dist+" max: "+max_dist);
                     if(min_dist > 60 ) {
                         DETECTTOMAKER = FALSE;
                         continue;
                     }
-
                     LinkedList<DMatch> good_matches = new LinkedList<DMatch>();
                     MatOfDMatch gm = new MatOfDMatch();
                     //對匹配結果進行篩選
@@ -531,7 +529,7 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
                     @Override
                     public void run() {
                         while(true) {
-                            st = decimalFormat.format(UnityPosition.x/10*6) + " " + decimalFormat.format(UnityPosition.y/10*6) + " " + decimalFormat.format(UnityPosition.z/10*6) + " " + decimalFormat.format(Rvec.get(0,0)[0]) + " " + decimalFormat.format(Rvec.get(1,0)[0]) + " " + decimalFormat.format(Rvec.get(2,0)[0]) + " " + playerList + " " + move + " ";
+                            st = decimalFormat.format(UnityPosition.x/10*6.5) + " " + decimalFormat.format(UnityPosition.y/10*6.5) + " " + decimalFormat.format(UnityPosition.z/10*6.5) + " " + decimalFormat.format(Rvec.get(0,0)[0]) + " " + decimalFormat.format(Rvec.get(1,0)[0]) + " " + decimalFormat.format(Rvec.get(2,0)[0]) + " " + playerList + " " + move + " ";
                             try {
                                 //從socket獲得輸出流outputStream
                                 outputStream = socket.getOutputStream();
@@ -561,10 +559,14 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
                                 System.out.println("接收檔案完成");
 
                                 if(datasize > 100){
-                                    paste = Imgcodecs.imdecode(new MatOfByte(data[buffer]), Imgcodecs.CV_LOAD_IMAGE_UNCHANGED);
-                                    Imgproc.cvtColor(paste, paste, COLOR_RGB2BGRA);
-                                    Log.i("resolution",paste.toString());
-
+                                    synchronized(paste) {
+                                        paste = Imgcodecs.imdecode(new MatOfByte(data[buffer]), Imgcodecs.CV_LOAD_IMAGE_UNCHANGED);
+                                        Log.i("resolution",paste.toString());
+                                        if(paste.rows()!=0 && paste.cols()!=0) {
+                                            Imgproc.cvtColor(paste, paste, COLOR_RGB2BGRA);
+                                            Log.i("resolution2",paste.toString());
+                                        }
+                                    }
                                 }
 
                                 System.out.println("放置圖片完成");
@@ -616,16 +618,20 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
                                                 + decimalFormat.format(Position.z));
             Mat frame = new Mat();
             if (paste.rows() == mRgba.rows() && paste.cols() == mRgba.cols()) {
-                //Imgproc.resize(paste,paste,new Size(paste.cols()*2,paste.rows()*2));
-                paste.copyTo(pasteBuffer);
-                //轉灰階
-                Imgproc.cvtColor(paste, pasteGray, COLOR_RGB2GRAY);
-                //大于阈值部分被置为0，小于部分被置为255 取得mask
-                Imgproc.threshold(pasteGray, pasteGray, 0, 255, Imgproc.THRESH_BINARY_INV);
-                Core.bitwise_and(mRgba, mRgba, frame, pasteGray);
-                Core.add(frame, paste, frame);
-                return frame;
-            } else if (pasteBuffer.empty() != true) {
+                    synchronized(paste) {
+                        //Imgproc.resize(paste,paste,new Size(paste.cols()*2,paste.rows()*2));
+                        paste.copyTo(pasteBuffer);
+                        //轉灰階
+                        Imgproc.cvtColor(paste, pasteGray, COLOR_RGB2GRAY);
+                        //大于阈值部分被置为0，小于部分被置为255 取得mask
+                        Imgproc.threshold(pasteGray, pasteGray, 0, 255, Imgproc.THRESH_BINARY_INV);
+                        Core.bitwise_and(mRgba, mRgba, frame, pasteGray);
+                        Log.i("paste",paste.toString());
+                        Core.add(frame, paste, frame);
+                    }
+                    return frame;
+                }
+            else if (pasteBuffer.empty() != true) {
                 //轉灰階
                 try {
                     Imgproc.cvtColor(pasteBuffer, pasteGray, COLOR_RGB2GRAY);
