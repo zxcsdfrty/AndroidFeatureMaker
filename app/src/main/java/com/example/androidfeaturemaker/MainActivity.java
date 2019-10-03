@@ -95,6 +95,8 @@ import static org.opencv.core.CvType.CV_8UC3;
 import static org.opencv.core.CvType.CV_8UC4;
 import static org.opencv.features2d.DescriptorMatcher.BRUTEFORCE_HAMMING;
 import static org.opencv.features2d.Features2d.drawKeypoints;
+import static org.opencv.imgproc.Imgproc.COLOR_BGR2GRAY;
+import static org.opencv.imgproc.Imgproc.COLOR_BGRA2GRAY;
 import static org.opencv.imgproc.Imgproc.COLOR_RGB2BGR;
 import static org.opencv.imgproc.Imgproc.COLOR_RGB2BGRA;
 import static org.opencv.imgproc.Imgproc.COLOR_RGB2GRAY;
@@ -621,9 +623,8 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
                     lock.lock();
                     //Imgproc.resize(paste,paste,new Size(paste.cols()*2,paste.rows()*2));
                     paste.copyTo(pasteBuffer);
-                    Log.i("paste",paste.toString());
                     //轉灰階
-                    Imgproc.cvtColor(paste, pasteGray, COLOR_RGB2GRAY);
+                    Imgproc.cvtColor(paste, pasteGray, COLOR_BGRA2GRAY);
                     //大于阈值部分被置为0，小于部分被置为255 取得mask
                     Imgproc.threshold(pasteGray, pasteGray, 0, 255, Imgproc.THRESH_BINARY_INV);
                     Core.bitwise_and(mRgba, mRgba, frame, pasteGray);
@@ -634,7 +635,7 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
             else if (pasteBuffer.empty() != true) {
                 //轉灰階
                 try {
-                    Imgproc.cvtColor(pasteBuffer, pasteGray, COLOR_RGB2GRAY);
+                    Imgproc.cvtColor(pasteBuffer, pasteGray, COLOR_BGRA2GRAY);
                     //大于阈值部分被置为0，小于部分被置为255 取得mask
                     Imgproc.threshold(pasteGray, pasteGray, 0, 255, Imgproc.THRESH_BINARY_INV);
                     Core.bitwise_and(mRgba, mRgba, frame, pasteGray);
