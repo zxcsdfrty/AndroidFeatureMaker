@@ -202,7 +202,7 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         btnSend = (Button) findViewById(R.id.Begin);
-        Button calibration = (Button)findViewById(R.id.Calibration);
+         /*Button calibration = (Button)findViewById(R.id.Calibration);
         calibration.setOnClickListener(new Button.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -210,7 +210,7 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
                 intent.setClass(MainActivity.this,Calibration.class);
                 startActivity(intent);
             }
-        });
+        });*/
         bmp = BitmapFactory.decodeResource(getResources(), R.drawable.p1);
         bmp32 = bmp.copy(Bitmap.Config.ARGB_8888, true);
         Utils.bitmapToMat(bmp32, maker);
@@ -355,6 +355,106 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
         });
         positionEstimate.start();
 
+        btnSend.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Thread connectServer = new Thread(new Runnable() {
+                    @Override
+                    public void run() {
+                        try {
+                            // 創建socket IP port
+                            socket = new Socket("140.121.197.164", 80);
+                            // 判斷是否連接成功
+                            //System.out.println(socket.isConnected());
+                            try {
+                                Thread.sleep(50);
+                            } catch (InterruptedException ex) {
+                                Thread.currentThread().interrupt();
+                            }
+
+                            //傳送圖片解析度
+                            st = mRgba.cols() + " " + mRgba.rows();
+                            outputStream = socket.getOutputStream();
+                            outputStream.write((st).getBytes("utf-8"));
+                            outputStream.flush();
+
+                            // record player's list
+                            InputStream in = socket.getInputStream();
+                            int len = 0;
+                            byte[]tmp = new byte[4];
+                            playerList = in.read();
+                            //Log.i("playerlist", "playerlist : "+playerList + "大小" + datasize);
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                        }
+                    }
+                });
+                Thread transmission = new Thread(new Runnable() {
+                    @Override
+                    public void run() {
+                        while(true) {
+                            st = decimalFormat.format(UnityPosition.x/10*6.5) + " " + decimalFormat.format(UnityPosition.y/10*6.5) + " " + decimalFormat.format(UnityPosition.z/10*6.5) + " " + decimalFormat.format(Rvec.get(0,0)[0]) + " " + decimalFormat.format(Rvec.get(1,0)[0]) + " " + decimalFormat.format(Rvec.get(2,0)[0]) + " " + playerList + " " + move + " ";
+                            try {
+                                //從socket獲得輸出流outputStream
+                                outputStream = socket.getOutputStream();
+                                //寫入數據到輸出流
+                                outputStream.write((st).getBytes("utf-8"));
+                                //發送
+                                outputStream.flush();
+                                //重置move
+                                move = -1;
+
+                                System.out.println("開始接收檔案");
+                                //DataInputStream dataInput = new DataInputStream(socket.getInputStream());
+                                InputStream inputStream = socket.getInputStream();
+                                datasize = 0;
+                                while(datasize == 0) {datasize = inputStream.available();}
+                                //int datasize = dataInput.available();
+                                System.out.println("大小: " + datasize);
+                                //互換buffer----------------------------------------------------
+                                if(datasize > 0) { buffer = java.lang.Math.abs(buffer-1); }
+                                byte[][] data = new byte[2][];
+                                data[buffer] = new byte[datasize];
+                                System.out.println("buffer = " + buffer);
+                                //--------------------------------------------------------------
+                                int len = 0;
+                                inputStream.read(data[buffer], len, datasize - len);
+                                //System.out.println("接收大小 : " + len);
+                                System.out.println("接收檔案完成");
+
+                                if(datasize > 100){
+                                    lock.lock();
+                                    paste = Imgcodecs.imdecode(new MatOfByte(data[buffer]), Imgcodecs.CV_LOAD_IMAGE_UNCHANGED);
+                                    Log.i("resolution",paste.toString());
+                                    if(paste.empty()!=true) {
+                                        Imgproc.cvtColor(paste, paste, COLOR_RGB2BGRA);
+                                    }
+                                    lock.unlock();
+                                }
+
+                                System.out.println("放置圖片完成");
+                                try {
+                                    Thread.sleep(100);
+                                } catch (InterruptedException ex) {
+                                    Thread.currentThread().interrupt();
+                                }
+                            } catch (IOException e) {
+                                e.printStackTrace();
+                            }
+                        }
+                    }
+                });
+                //start thread
+                connectServer.start();
+                try{
+                    connectServer.join();
+                    transmission.start();
+                }catch (InterruptedException e){
+                    e.printStackTrace();
+                }
+            }
+        });
+
         mGesture = new GestureDetector(this,new GestureDetector.SimpleOnGestureListener()
         {
             @Override
@@ -492,107 +592,6 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
         mRgba = inputFrame.rgba();
         mGray=inputFrame.gray();
         MatOfPoint2f nextPtr = new MatOfPoint2f();
-        btnSend.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                Thread connectServer = new Thread(new Runnable() {
-                    @Override
-                    public void run() {
-                        try {
-                            // 創建socket IP port
-                            socket = new Socket("140.121.197.164", 80);
-                            // 判斷是否連接成功
-                            //System.out.println(socket.isConnected());
-                            try {
-                                Thread.sleep(50);
-                            } catch (InterruptedException ex) {
-                                Thread.currentThread().interrupt();
-                            }
-
-                            //傳送圖片解析度
-                            st = mRgba.cols() + " " + mRgba.rows();
-                            outputStream = socket.getOutputStream();
-                            outputStream.write((st).getBytes("utf-8"));
-                            outputStream.flush();
-
-                            // record player's list
-                            InputStream in = socket.getInputStream();
-                            int len = 0;
-                            byte[]tmp = new byte[4];
-                            //datasize = in.available();
-                            //in.read(tmp, len, datasize - len);
-                            playerList = in.read();
-                            //Log.i("playerlist", "playerlist : "+playerList + "大小" + datasize);
-                        } catch (IOException e) {
-                            e.printStackTrace();
-                        }
-                    }
-                });
-                Thread transmission = new Thread(new Runnable() {
-                    @Override
-                    public void run() {
-                        while(true) {
-                            st = decimalFormat.format(UnityPosition.x/10*6.5) + " " + decimalFormat.format(UnityPosition.y/10*6.5) + " " + decimalFormat.format(UnityPosition.z/10*6.5) + " " + decimalFormat.format(Rvec.get(0,0)[0]) + " " + decimalFormat.format(Rvec.get(1,0)[0]) + " " + decimalFormat.format(Rvec.get(2,0)[0]) + " " + playerList + " " + move + " ";
-                            try {
-                                //從socket獲得輸出流outputStream
-                                outputStream = socket.getOutputStream();
-                                //寫入數據到輸出流
-                                outputStream.write((st).getBytes("utf-8"));
-                                //發送
-                                outputStream.flush();
-                                //重置move
-                                move = -1;
-
-                                System.out.println("開始接收檔案");
-                                //DataInputStream dataInput = new DataInputStream(socket.getInputStream());
-                                InputStream inputStream = socket.getInputStream();
-                                datasize = 0;
-                                while(datasize == 0) {datasize = inputStream.available();}
-                                //int datasize = dataInput.available();
-                                System.out.println("大小: " + datasize);
-                                //互換buffer----------------------------------------------------
-                                if(datasize > 0) { buffer = java.lang.Math.abs(buffer-1); }
-                                byte[][] data = new byte[2][];
-                                data[buffer] = new byte[datasize];
-                                System.out.println("buffer = " + buffer);
-                                //--------------------------------------------------------------
-                                int len = 0;
-                                inputStream.read(data[buffer], len, datasize - len);
-                                //System.out.println("接收大小 : " + len);
-                                System.out.println("接收檔案完成");
-
-                                if(datasize > 100){
-                                    lock.lock();
-                                    paste = Imgcodecs.imdecode(new MatOfByte(data[buffer]), Imgcodecs.CV_LOAD_IMAGE_UNCHANGED);
-                                    Log.i("resolution",paste.toString());
-                                    if(paste.empty()!=true) {
-                                        Imgproc.cvtColor(paste, paste, COLOR_RGB2BGRA);
-                                    }
-                                    lock.unlock();
-                                }
-
-                                System.out.println("放置圖片完成");
-                                try {
-                                    Thread.sleep(500);
-                                } catch (InterruptedException ex) {
-                                    Thread.currentThread().interrupt();
-                                }
-                            } catch (IOException e) {
-                                e.printStackTrace();
-                            }
-                        }
-                    }
-                });
-                //start thread
-                connectServer.start();
-                try{
-                    connectServer.join();
-                    transmission.start();
-                }catch (InterruptedException e){
-                    e.printStackTrace();
-                }
-            }
-        });
 
         if(DETECTTOMAKER) {
             /*Video.calcOpticalFlowPyrLK(lightFrame, mGray, estimateScenePoint, nextPtr, statusMat, errSimilarityMat);
