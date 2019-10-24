@@ -260,9 +260,15 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
                     featureDetector.detect(estimateFrame,keyPoint_test);
                     descriptorExtractor.compute(estimateFrame,keyPoint_test,descriptor2);
 
+                    Log.i("descriptor1",""+descriptor1.toString());
+                    Log.i("descriptor2",""+descriptor2.toString());
+                    if(descriptor2.empty()){
+                        DETECTTOMAKER = FALSE;
+                        continue;
+                    }
                     matcher.match(descriptor1, descriptor2, matches);
-                    List<DMatch> matchesList = matches.toList();
 
+                    List<DMatch> matchesList = matches.toList();
                     //若沒有任何點match直接return,可以防止當matchesList沒有任何東西時OutOfBoundary的情況
                     if(matchesList.isEmpty()) {
                         DETECTTOMAKER = FALSE;
@@ -434,7 +440,7 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
 
                                 System.out.println("放置圖片完成");
                                 try {
-                                    Thread.sleep(100);
+                                    Thread.sleep(0);
                                 } catch (InterruptedException ex) {
                                     Thread.currentThread().interrupt();
                                 }
