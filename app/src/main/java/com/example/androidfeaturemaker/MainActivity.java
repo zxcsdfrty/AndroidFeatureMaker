@@ -120,6 +120,7 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
     int playerList = -1;
     //紀錄玩家資訊
     int move = -1;
+    int ready =0;
     String st;
     //test
     private Button btnSend;
@@ -308,8 +309,6 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
                     LinkedList<Point> sceneList = new LinkedList<Point>();
                     //將匹配到的特徵點取出
                     for(int i = 0; i<good_matches.size(); i++){
-                        //Log.i("point1",""+keypoints_objectList.get(good_matches.get(i).queryIdx).pt);
-                        //Log.i("point2",""+keypoints_sceneList.get(good_matches.get(i).trainIdx).pt);
                         objList.addLast(keypoints_objectList.get(good_matches.get(i).queryIdx).pt);
                         sceneList.addLast(keypoints_sceneList.get(good_matches.get(i).trainIdx).pt);
                     }
@@ -399,7 +398,8 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
                     @Override
                     public void run() {
                         while(true) {
-                            st = decimalFormat.format(UnityPosition.x/10*6.5) + " " + decimalFormat.format(UnityPosition.y/10*6.5) + " " + decimalFormat.format(UnityPosition.z/10*6.5) + " " + decimalFormat.format(Rvec.get(0,0)[0]) + " " + decimalFormat.format(Rvec.get(1,0)[0]) + " " + decimalFormat.format(Rvec.get(2,0)[0]) + " " + playerList + " " + move + " ";
+                            //st = decimalFormat.format(UnityPosition.x/10*6.5) + " " + decimalFormat.format(UnityPosition.y/10*6.5) + " " + decimalFormat.format(UnityPosition.z/10*6.5) + " " + decimalFormat.format(Rvec.get(0,0)[0]) + " " + decimalFormat.format(Rvec.get(1,0)[0]) + " " + decimalFormat.format(Rvec.get(2,0)[0]) + " " + playerList + " " + move + " ";
+                            st = decimalFormat.format(UnityPosition.x / 10 * 6.5) + " " + decimalFormat.format(UnityPosition.y / 10 * 6.5) + " " + decimalFormat.format(UnityPosition.z / 10 * 6.5) + " " + decimalFormat.format(Rvec.get(0, 0)[0]) + " " + decimalFormat.format(Rvec.get(1, 0)[0]) + " " + decimalFormat.format(Rvec.get(2, 0)[0]) + " " + playerList + " " + move + " " + ready + " ";
                             try {
                                 //從socket獲得輸出流outputStream
                                 outputStream = socket.getOutputStream();
